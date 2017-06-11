@@ -9,7 +9,13 @@ var&? SDL_Init sdl =
 
 watching sdl do
     var int runSpeed = 100;
+
     #include "platform.ceu"        
+    #include "player.ceu"
+
+    code/tight WidthToMS (var int w) -> int do
+        escape ((1000 * w)/outer.runSpeed);
+    end
 
     native/pre do
         ##include <time.h>
@@ -18,20 +24,27 @@ watching sdl do
 
     pool[] Platform platforms;
     var int i;
-    var int side = 1;
+    var int side = -1;
+
+    var int x = 0;
+    var int y = 10;
+    var int w = 20;
+    spawn Player(72, (y-0.5) * BLOCK_SIZE);
+    spawn Platform(x,y * BLOCK_SIZE,w);
+    var int t = call WidthToMS((w * BLOCK_SIZE) - WINDOW_W);
+    await (t)ms;
+
     loop do
-        var int w = 3 + _rand()%6;
-        var int x = WINDOW_W;
-        var int y = (5 + side*(2+_rand()%(192/BLOCK_SIZE))) * BLOCK_SIZE;
+        w = 4 + _rand()%6;
+        x = WINDOW_W;
+        y = (5 + side*(2+_rand()%(192/BLOCK_SIZE))) * BLOCK_SIZE;
         spawn Platform(x,y,w) in platforms;
-        var int t = ((1000 * w * BLOCK_SIZE)/runSpeed);
+        t = call WidthToMS(w * BLOCK_SIZE);
         _printf("Y=%d, To wait: %d ms\n", y, t);
         await (t)ms;
         side = side * -1;
-        runSpeed = runSpeed + 25;
+        runSpeed = runSpeed + 10;
     end
-
-    //spawn Player();
 
     await FOREVER;
 end

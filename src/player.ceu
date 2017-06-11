@@ -1,10 +1,24 @@
-code/await Player (void) -> FOREVER do
-    var float x = 640/2 - 20/2;
-    var float y = 480-50;
+#define PLAYER_SIZE 48
+#define PLAYER_ANIMATION_FRAMES 4
+
+native/const _SDL_FLIP_NONE, _SDL_FLIP_VERTICAL;
+native/nohold _SDL_RenderCopyEx;
+native/plain  _SDL_RendererFlip;
+
+var& SDL_Open_Image img_player =
+        spawn SDL_Open_Image(&sdl!.ren, "res/player.png");
+
+code/await Player (var float x, var float y) -> FOREVER do
+    //var float x = 640/2 - 20/2;
+    //var float y = 480-50;
     var float vx = 0;
     var float vy = 0;
+    var float angle = 0.0;
+    var int animation_frame = 0;
+    vector[PLAYER_ANIMATION_FRAMES] int player_animation = [0, 1, 2, 1];
 
-    var SDL_Rect r = val SDL_Rect(0,0, 20,50);
+    var SDL_Rect draw_rect = val SDL_Rect(0,0,PLAYER_SIZE,PLAYER_SIZE);
+    var _SDL_RendererFlip flip = _SDL_FLIP_NONE;
 
     par do
         var int dt;
@@ -12,30 +26,39 @@ code/await Player (void) -> FOREVER do
             x = x + vx*dt/1000;
             y = y + vy*dt/1000;
         end
+    with 
+        every 160ms do
+            animation_frame = (animation_frame + 1)%PLAYER_ANIMATION_FRAMES;
+        end
     with
         par do
             loop do
                 var _SDL_KeyboardEvent&& key;
-                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_LEFT;
-                vx = -100;
-                key = await SDL_KEYUP   until key:keysym.sym==_SDLK_LEFT;
-                vx = 0;
+                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_UP;
+                flip = _SDL_FLIP_VERTICAL;
+                //vx = -100;
+                //key = await SDL_KEYUP   until key:keysym.sym==_SDLK_LEFT;
+                //vx = 0;
             end
         with
             loop do
                 var _SDL_KeyboardEvent&& key;
-                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_RIGHT;
-                vx = 100;
-                key = await SDL_KEYUP   until key:keysym.sym==_SDLK_RIGHT;
-                vx = 0;
+                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_DOWN;
+                flip = _SDL_FLIP_NONE;
+                //vx = 100;
+                //key = await SDL_KEYUP   until key:keysym.sym==_SDLK_RIGHT;
+                //vx = 0;
             end
         end
     with
         every SDL_REDRAW do
-            _SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0x00,0x00,0x00,0xFF);
-            r.x = x as int;
-            r.y = y as int;
-            _SDL_RenderFillRect(&&outer.sdl!.ren, (&&r as _SDL_Rect&&));
+            var SDL_Rect clip_rect = val SDL_Rect(player_animation[animation_frame] * PLAYER_SIZE, 0, PLAYER_SIZE, PLAYER_SIZE);
+            draw_rect.x = (x as int)-(PLAYER_SIZE>>1);
+            draw_rect.y = (y as int)-(PLAYER_SIZE>>1);
+            _SDL_RenderCopyEx(&&outer.sdl!.ren, &&outer.img_player.tex.tex, &&clip_rect as _SDL_Rect&&,
+                                &&draw_rect as _SDL_Rect&&, angle, null, flip);
+            //_SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xDD,0xDD,0xDD,0xFF);
+            //_SDL_RenderFillRect(&&outer.sdl!.ren, (&&draw_rect as _SDL_Rect&&));
         end
     end
 end
