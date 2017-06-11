@@ -8,45 +8,65 @@ var&? SDL_Init sdl =
     spawn SDL_Init("Gravity Platformer", WINDOW_W, WINDOW_H, SDL_Color(0xFF,0xFF,0xFF,0xFF));
 
 watching sdl do
-    var int runSpeed = 100;
-
-    #include "platform.ceu"        
-    #include "player.ceu"
-
-    code/tight WidthToMS (var int w) -> int do
-        escape ((1000 * w)/outer.runSpeed);
-    end
-
-    native/pre do
-        ##include <time.h>
-    end
-    _srand(_time(null));
-
-    pool[] Platform platforms;
-    var int i;
-    var int side = -1;
-
-    var int x = 0;
-    var int y = 10;
-    var int w = 20;
-    spawn Player(72, (y-0.5) * BLOCK_SIZE);
-    spawn Platform(x,y * BLOCK_SIZE,w);
-    var int t = call WidthToMS((w * BLOCK_SIZE) - WINDOW_W);
-    await (t)ms;
-
     loop do
-        w = 4 + _rand()%6;
-        x = WINDOW_W;
-        y = (5 + side*(2+_rand()%(192/BLOCK_SIZE))) * BLOCK_SIZE;
-        spawn Platform(x,y,w) in platforms;
-        t = call WidthToMS(w * BLOCK_SIZE);
-        _printf("Y=%d, To wait: %d ms\n", y, t);
-        await (t)ms;
-        side = side * -1;
-        runSpeed = runSpeed + 10;
-    end
+        var int runSpeed = 200;
+        event void gameOver;
 
-    await FOREVER;
+        #include "utilities.ceu"
+        #include "platform.ceu"        
+        #include "player.ceu"  
+
+        var int minimumSize = 8;
+        var int yVariation = 2;
+
+        code/tight WidthToMS (var int w) -> int do
+            escape ((1000 * w)/outer.runSpeed);
+        end
+
+        native/pre do
+            ##include <time.h>
+        end
+        _srand(_time(null));
+
+        var int i;
+        var int side = -1;
+
+        var int x = 0;
+        var int y = 10;
+        var int w = 20;
+        
+        spawn Platform(x,y * BLOCK_SIZE,w) in platforms;
+        var& Player player = spawn Player(72, (y-0.5) * BLOCK_SIZE);
+        var int t = call WidthToMS((w * BLOCK_SIZE) - WINDOW_W);
+        await (t)ms;
+
+        par/or do
+            loop do
+                w = minimumSize + _rand()%10;
+                if (_rand()%1000 > 950) then
+                    w = w + 20;
+                end
+                x = WINDOW_W;
+                y = (5 + side*(2+_rand()%yVariation)) * BLOCK_SIZE;
+                spawn Platform(x,y,w) in platforms;
+                t = call WidthToMS(w * BLOCK_SIZE);
+                //_printf("Y=%d, To wait: %d ms\n", y, t);
+                await (t)ms;
+                side = side * -1;
+                runSpeed = runSpeed + 10;
+                player.fallSpeed = player.fallSpeed + 20;
+                if (runSpeed%120 == 0 and minimumSize > 3) then
+                    minimumSize = minimumSize-1;
+                end
+                if (runSpeed%190 == 0 and yVariation < 3) then
+                    yVariation = yVariation+1;
+                end
+                
+            end
+        with 
+            await gameOver;
+        end
+    end
 end
 
 escape 0;

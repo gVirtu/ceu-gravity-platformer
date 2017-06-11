@@ -2,8 +2,8 @@
 var& SDL_Open_Image img_block =
         spawn SDL_Open_Image(&sdl!.ren, "res/block.png");
 
-code/await Platform (var int x, var int y, var int w) -> void do
-    var SDL_Rect collision = val SDL_Rect(x,y,w*BLOCK_SIZE,BLOCK_SIZE);
+code/await Platform (var int x, var int y, var int w) -> (var SDL_Rect collision) -> void do
+    collision = val SDL_Rect(x,y,w*BLOCK_SIZE,BLOCK_SIZE);
 
     par/or do
         var int dt;
@@ -23,6 +23,10 @@ code/await Platform (var int x, var int y, var int w) -> void do
                 _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_block.tex.tex, null,
                                 &&block_rect as _SDL_Rect&&);
             end
+            //_SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xFF,0xDD,0xDD,0xFF);
+            //_SDL_RenderFillRect(&&outer.sdl!.ren, (&&collision as _SDL_Rect&&));
         end
     end
 end
+
+pool[] Platform platforms;

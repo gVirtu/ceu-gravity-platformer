@@ -1,5 +1,7 @@
 #define PLAYER_SIZE 48
-#define PLAYER_ANIMATION_FRAMES 4
+#define HITBOX_W 32
+#define HITBOX_H 40
+#define FLOOR_THRESHOLD 8
 
 native/const _SDL_FLIP_NONE, _SDL_FLIP_VERTICAL;
 native/nohold _SDL_RenderCopyEx;
@@ -8,57 +10,111 @@ native/plain  _SDL_RendererFlip;
 var& SDL_Open_Image img_player =
         spawn SDL_Open_Image(&sdl!.ren, "res/player.png");
 
-code/await Player (var float x, var float y) -> FOREVER do
-    //var float x = 640/2 - 20/2;
-    //var float y = 480-50;
+code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER do
+    fallSpeed = 600;
     var float vx = 0;
-    var float vy = 0;
+    var float vy = fallSpeed;
+    var float grav = 700;
     var float angle = 0.0;
+    var float wscale = 1.0;
+    var float hscale = 1.0;
+    var bool falling = true;
+    var int grav_sign = 1;
+    var&? Platform myFloor;
+    
     var int animation_frame = 0;
-    vector[PLAYER_ANIMATION_FRAMES] int player_animation = [0, 1, 2, 1];
+    vector[] int player_animation = [0, 1, 2, 1];
 
     var SDL_Rect draw_rect = val SDL_Rect(0,0,PLAYER_SIZE,PLAYER_SIZE);
+    var SDL_Rect collision = val SDL_Rect(0,0,HITBOX_W,HITBOX_H);
     var _SDL_RendererFlip flip = _SDL_FLIP_NONE;
 
-    par do
+    par/or do
         var int dt;
         every dt in SDL_DT do
             x = x + vx*dt/1000;
             y = y + vy*dt/1000;
+            if falling then
+                //Collision check
+                var&? Platform plat;
+                var bool collided = false;
+                loop plat in outer.platforms do
+                    loop do
+                        if (call Intersects(&plat!.collision, &collision)) then
+                            collided = true;                        
+                            var int diff = call Sign(vy as int);
+                            //_printf("Collided at y=%d! Adjusting by %d\n", collision.y, -diff);
+                            collision.y = collision.y - diff;
+                        else
+                            break;
+                        end
+                    end
+                    if (collided) then
+                        myFloor = &plat;
+                        break;
+                    end
+                end
+                if (collided) then
+                    y = collision.y + (collision.h>>1);
+                    vy = 0;
+                    hscale = 0.6;
+                    wscale = 1.4;
+                    falling = false;
+                end
+            else
+                if hscale < 1.0 then hscale = hscale + 0.1; end
+                if wscale > 1.0 then wscale = wscale - 0.1; end
+                var SDL_Rect collision_shifted = collision;
+                collision_shifted.y = collision_shifted.y + grav_sign*FLOOR_THRESHOLD;
+                if ((not myFloor?) or (not call Intersects(&myFloor!.collision, &collision_shifted))) then
+                    falling = true;
+                    break;
+                end
+            end
+        end
+
+        //Dead
+        every dt in SDL_DT do
+            y = y + vy*dt/1000;
+            vy = vy + grav*grav_sign*dt/1000;
+            angle = angle + 8.0 * grav_sign;
+        end
+    with
+        //Test if dead
+        var int dt;
+        every dt in SDL_DT do
+            if (y < -PLAYER_SIZE or y > WINDOW_H+PLAYER_SIZE) then
+                emit outer.gameOver;
+            end
         end
     with 
         every 160ms do
-            animation_frame = (animation_frame + 1)%PLAYER_ANIMATION_FRAMES;
+            animation_frame = (animation_frame + 1)%($player_animation as int);
         end
     with
-        par do
-            loop do
-                var _SDL_KeyboardEvent&& key;
-                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_UP;
-                flip = _SDL_FLIP_VERTICAL;
-                //vx = -100;
-                //key = await SDL_KEYUP   until key:keysym.sym==_SDLK_LEFT;
-                //vx = 0;
-            end
-        with
-            loop do
-                var _SDL_KeyboardEvent&& key;
-                key = await SDL_KEYDOWN until key:keysym.sym==_SDLK_DOWN;
-                flip = _SDL_FLIP_NONE;
-                //vx = 100;
-                //key = await SDL_KEYUP   until key:keysym.sym==_SDLK_RIGHT;
-                //vx = 0;
-            end
+        loop do
+            var _SDL_KeyboardEvent&& key;
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_UP and falling==false);
+            flip = _SDL_FLIP_VERTICAL; grav_sign = -1;
+            falling = true; vy = -fallSpeed; wscale = 0.6; hscale = 1.1;
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_DOWN and falling==false);
+            flip = _SDL_FLIP_NONE; grav_sign = 1;
+            falling = true; vy = fallSpeed; wscale = 0.6; hscale = 1.1;
         end
     with
         every SDL_REDRAW do
             var SDL_Rect clip_rect = val SDL_Rect(player_animation[animation_frame] * PLAYER_SIZE, 0, PLAYER_SIZE, PLAYER_SIZE);
-            draw_rect.x = (x as int)-(PLAYER_SIZE>>1);
-            draw_rect.y = (y as int)-(PLAYER_SIZE>>1);
+            draw_rect.w = (PLAYER_SIZE*wscale) as int;
+            draw_rect.h = (PLAYER_SIZE*hscale) as int;
+            draw_rect.x = (x as int)-(draw_rect.w>>1);
+            draw_rect.y = (y as int)-(draw_rect.h>>1)+((grav_sign * (1-hscale) * (draw_rect.h>>1)) as int); //last term added so we stick to the ground when ´squished´
+            collision.x = (x as int)-(collision.w>>1);
+            collision.y = (y as int)-(collision.h>>1);
+            
+            //_SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xDD,0xDD,0xDD,0xFF);
+            //_SDL_RenderFillRect(&&outer.sdl!.ren, (&&collision as _SDL_Rect&&));
             _SDL_RenderCopyEx(&&outer.sdl!.ren, &&outer.img_player.tex.tex, &&clip_rect as _SDL_Rect&&,
                                 &&draw_rect as _SDL_Rect&&, angle, null, flip);
-            //_SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xDD,0xDD,0xDD,0xFF);
-            //_SDL_RenderFillRect(&&outer.sdl!.ren, (&&draw_rect as _SDL_Rect&&));
         end
     end
 end
