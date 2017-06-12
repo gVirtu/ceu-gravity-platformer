@@ -37,6 +37,8 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
     var SDL_Rect collision = val SDL_Rect(0,0,HITBOX_W,HITBOX_H);
     var _SDL_RendererFlip flip = _SDL_FLIP_NONE;
 
+	event void dead;
+
 	code/tight SpawnBoom (void) -> bool do
 		var int i;
 		loop i in [1 -> 8] do
@@ -68,9 +70,11 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 		par/or do			
 		    every dt in SDL_DT do
 		        y = y + vy*dt/1000;
+				if (y < -tex_h or y > WINDOW_H+tex_h) then
+					emit outer.gameOver;
+				end
 			end
 		with
-			var bool dead = false;
 			loop do
 				//Falling
 				every dt in SDL_DT do
@@ -127,8 +131,7 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 				        var SDL_Rect collision_shifted = collision;
 				        collision_shifted.y = collision_shifted.y + grav_sign*FLOOR_THRESHOLD;
 				        if ((not myFloor?) or (not call Intersects(&myFloor!.collision, &collision_shifted))) then
-							dead = true;
-							break;
+							emit dead;
 				        end
 					end
 				with
@@ -157,11 +160,9 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 						break;
 					end
 				end
-
-				if (dead) then 
-					break;
-				end
 			end
+		with
+			await dead;
 		end
 
         //Dead
@@ -169,10 +170,6 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
             y = y + vy*dt/1000;
             vy = vy + grav*grav_sign*dt/1000;
             angle = angle + 8.0 * grav_sign;
-
-			if (y < -tex_h or y > WINDOW_H+tex_h) then
-                emit outer.gameOver;
-            end
         end
     with 
         every 160ms do
