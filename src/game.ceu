@@ -13,6 +13,7 @@
 var&? SDL_Init sdl =
     spawn SDL_Init("Gravity Platformer", WINDOW_W, WINDOW_H, SDL_Color(0xFF,0xFF,0xFF,0xFF));
 
+native _log10;
 native/const 
     _SDL_FLIP_NONE, 
     _SDL_FLIP_VERTICAL,
@@ -30,6 +31,7 @@ watching sdl do
         var int runSpeed = 200;
         var int minRunSpeed = runSpeed;
         var int score = 1;
+		var int scorelength;
         event void gameOver;
         event void scoreUpdate;
 
@@ -59,7 +61,6 @@ watching sdl do
             ##include <time.h>
         end
 
-        native _log10;
         _srand(_time(null));
 
         var int side = -1;
@@ -68,7 +69,7 @@ watching sdl do
         var int y = 10;
         var int w = 20;
         
-        var int scorelength = _log10(score) + 1;
+        scorelength = _log10(score) + 1;
 
 		vector[] byte string = [ {'a'},{'b'},{'c'} ];
 		string = string .. [ 70 ];
