@@ -15,7 +15,7 @@ code/await Collectible (var int x, var int y) -> (var SDL_Rect collision, event 
 		        var int v = dt*outer.runSpeed/1000;
 		        x = x - v;
 				angle = _sin(sinT) * 20.0;
-				sinT = sinT + dt/100000;
+				sinT = sinT + (dt as float)/100.0;
 		        collision.x = collision.x - v;
 		        if (x+tex.width < 0) then
 		            break;
@@ -44,7 +44,9 @@ code/await Collectible (var int x, var int y) -> (var SDL_Rect collision, event 
             //draw_rect.w = (tex.width*wscale) as int;
             //draw_rect.h = (tex.height*hscale) as int;
 			draw_rect.x = (x as int)-(draw_rect.w>>1);
-			draw_rect.y = (y as int)-(draw_rect.h>>1);
+			draw_rect.y = (y as int)-(draw_rect.h>>1)+((_sin(sinT/2.0)*10) as int);
+			collision.x = (x as int)-(collision.w>>1);
+            collision.y = (y as int)-(collision.h>>1);
             _SDL_RenderCopyEx(&&outer.sdl!.ren, &&tex.tex, null,
                                 &&draw_rect as _SDL_Rect&&, angle, null, _SDL_FLIP_NONE);
         end
