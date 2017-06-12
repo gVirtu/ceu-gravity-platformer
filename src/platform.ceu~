@@ -50,3 +50,5 @@ code/await Platform (var int x, var int y, var int w, var int side) -> (var SDL_
         end
     end
 end
+
+pool[] Platform platforms;

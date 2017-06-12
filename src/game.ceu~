@@ -7,8 +7,6 @@
 #define GLYPH_W 48
 #define GLYPH_H 64
 
-#define PI 3.1415926535897932
-
 var&? SDL_Init sdl =
     spawn SDL_Init("Gravity Platformer", WINDOW_W, WINDOW_H, SDL_Color(0xFF,0xFF,0xFF,0xFF));
 
