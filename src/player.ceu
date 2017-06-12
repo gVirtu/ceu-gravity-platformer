@@ -1,13 +1,19 @@
 #ifndef _PLAYER
 #define _PLAYER
 
-#define PLAYER_SIZE 48
 #define HITBOX_W 32
 #define HITBOX_H 40
 #define FLOOR_THRESHOLD 8
+#define PLAYER_FRAME_COUNT 3
 
 var& SDL_Open_Image img_player =
         spawn SDL_Open_Image(&sdl!.ren, "res/player.png");
+
+var int img_player_w = 0;
+var int img_player_h = 0;
+
+_SDL_QueryTexture(&&img_player.tex.tex, null, null, &&img_player_w, &&img_player_h);
+img_player_w = img_player_w / PLAYER_FRAME_COUNT;
 
 code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER do
     fallSpeed = 600;
@@ -21,26 +27,33 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
     var int grav_sign = 1;
     var&? Platform myFloor;
 	pool[] Particle particles;
+
+    var& int tex_w = &outer.img_player_w;
+    var& int tex_h = &outer.img_player_h;
     
     var int animation_frame = 0;
     vector[] int player_animation = [0, 1, 2, 1];
 
-    var SDL_Rect draw_rect = val SDL_Rect(0,0,PLAYER_SIZE,PLAYER_SIZE);
+    var SDL_Rect draw_rect = val SDL_Rect(0,0,tex_w,tex_h);
     var SDL_Rect collision = val SDL_Rect(0,0,HITBOX_W,HITBOX_H);
     var _SDL_RendererFlip flip = _SDL_FLIP_NONE;
 
 	code/tight SpawnBoom (void) -> bool do
 		var int i;
 		loop i in [1 -> 8] do
-			var float xspd = 80;
-			var float yspd = 180;
+			var float xspd = 180;
+			var float yspd = 40;
 			var float dir = (_rand()%180);
-			spawn Particle(	outer.x, outer.y + ((PLAYER_SIZE>>2) + 4)*outer.grav_sign, //x, y
-								0.4, 0.4,	//((40.0 + (_rand()%20)) as float)	//scale
-								(_rand()%360) as float, 1.0,					//angle, alpha
-								_cos(dir*PI/180.0)*xspd, -_sin(dir*PI/180.0)*yspd,					//vx, vy
-								50.0, 5.0, 5.0, -2.0) in outer.particles;				//v_angle, v_wscale, v_hscale, v_alpha
-		end
+            var float speedMod = (outer.runSpeed / outer.minRunSpeed);
+			spawn Particle(	outer.x, outer.y + ((outer.tex_h>>2) + 4)*outer.grav_sign,            //x, y
+								0.4, 0.4,	                                                //scale
+								(_rand()%360) as float, 1.0,					            //angle, alpha
+								_cos(dir*PI/180.0)*xspd*speedMod,                           //vx
+                                -outer.grav_sign*_sin(dir*PI/180.0)*yspd*speedMod,          //vy
+								50.0*speedMod,                                              //v_angle
+                                5.0*speedMod, 5.0*speedMod, -2.0 * speedMod)                //v_wscale, v_hscale, v_alpha   
+            in outer.particles;
+        end
 		escape true;
 	end
 
@@ -98,7 +111,7 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
         //Test if dead
         var int dt;
         every dt in SDL_DT do
-            if (y < -PLAYER_SIZE or y > WINDOW_H+PLAYER_SIZE) then
+            if (y < -tex_h or y > WINDOW_H+tex_h) then
                 emit outer.gameOver;
             end
         end
@@ -109,7 +122,7 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 	with
 		every (200 + _rand()%200)ms do
 			if (not falling) then
-				spawn Particle(	x + 8, y + ((PLAYER_SIZE>>2) + 4)*grav_sign, 	//x, y
+				spawn Particle(	x + 8, y + ((tex_h>>2) + 4)*grav_sign, 	//x, y
 								0.4, 0.4,	//((40.0 + (_rand()%20)) as float)	//scale
 								(_rand()%360) as float, 1.0,					//angle, alpha
 								-outer.runSpeed, -20.1*grav_sign,				//vx, vy
@@ -119,20 +132,20 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
     with
         loop do
             var _SDL_KeyboardEvent&& key;
-            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_UP and falling==false);
+            key = await SDL_KEYDOWN until ((key:keysym.sym==_SDLK_UP or key:keysym.sym==_SDLK_SPACE) and falling==false);
 			call SpawnBoom();
             flip = _SDL_FLIP_VERTICAL; grav_sign = -1;
             falling = true; vy = -fallSpeed; wscale = 0.6; hscale = 1.1;
-            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_DOWN and falling==false);
+            key = await SDL_KEYDOWN until ((key:keysym.sym==_SDLK_DOWN or key:keysym.sym==_SDLK_SPACE) and falling==false);
 			call SpawnBoom();
             flip = _SDL_FLIP_NONE; grav_sign = 1;
             falling = true; vy = fallSpeed; wscale = 0.6; hscale = 1.1;
         end
     with
         every SDL_REDRAW do
-            var SDL_Rect clip_rect = val SDL_Rect(player_animation[animation_frame] * PLAYER_SIZE, 0, PLAYER_SIZE, PLAYER_SIZE);
-            draw_rect.w = (PLAYER_SIZE*wscale) as int;
-            draw_rect.h = (PLAYER_SIZE*hscale) as int;
+            var SDL_Rect clip_rect = val SDL_Rect(player_animation[animation_frame] * tex_w, 0, tex_w, tex_h);
+            draw_rect.w = (tex_w*wscale) as int;
+            draw_rect.h = (tex_h*hscale) as int;
             draw_rect.x = (x as int)-(draw_rect.w>>1);
             draw_rect.y = (y as int)-(draw_rect.h>>1)+((grav_sign * (1-hscale) * (draw_rect.h>>1)) as int); //last term added so we stick to the ground when ´squished´
             collision.x = (x as int)-(collision.w>>1);

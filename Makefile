@@ -1,5 +1,5 @@
-CEU_DIR     = /opt/reativos/ceu
-CEU_SDL_DIR = /opt/reativos/ceu-sdl
+CEU_DIR     = /home/admin01/Documentos/ceu
+CEU_SDL_DIR = /home/admin01/Documentos/ceu-sdl
 
 game:
 	    ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_SDL_DIR)/include" \
@@ -8,6 +8,6 @@ game:
 	        --env --env-types=$(CEU_DIR)/env/types.h                         \
 	              --env-threads=$(CEU_DIR)/env/threads.h                     \
 	              --env-main=$(CEU_DIR)/env/main.c                           \
-	        --cc --cc-args="-lm -llua5.2 -lpthread -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lSDL2_gfx" \
+	        --cc --cc-args="-lm -llua5.3 -lpthread -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lSDL2_gfx" \
 	             --cc-output=/tmp/game.ceu;                                  \
 		/tmp/game.ceu;	                                                 \
