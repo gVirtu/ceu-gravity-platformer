@@ -1,45 +1,35 @@
 var& SDL_Open_Image img_collectible =
         spawn SDL_Open_Image(&sdl!.ren, "res/faust.png");
 
-code/await Collectible (var int x, var int y) -> (var SDL_Rect collision) -> void do
-    collision = val SDL_Rect(x,y,w*BLOCK_SIZE,BLOCK_SIZE);
+code/await Collectible (var int x, var int y) -> (var SDL_Rect collision, event void collided) -> void do
+	var& SDL_Texture tex = &outer.img_collectible.tex;
+    collision = val SDL_Rect(x,y,tex.width,tex.height);
+	var SDL_Rect draw_rect = val SDL_Rect(0,0,tex.width,tex.height);
+	var float angle = 0.0;
+	var float sinT = 0.0;
 
     par/or do
-        var int dt;
-        every dt in SDL_DT do
-            var int v = dt*outer.runSpeed/1000;
-            x = x - v;
-            collision.x = collision.x - v;
-            if (x+(w*BLOCK_SIZE) < 0) then
-                break;
-            end
-        end
+		watching collided do
+		    var int dt;
+		    every dt in SDL_DT do
+		        var int v = dt*outer.runSpeed/1000;
+		        x = x - v;
+				angle = _sin(sinT) * 20.0;
+				sinT = sinT + dt/100000;
+		        collision.x = collision.x - v;
+		        if (x+tex.width < 0) then
+		            break;
+		        end
+		    end
+		end
     with
         every SDL_REDRAW do
-            var int i;
-            var SDL_Rect block_rect;
-            block_rect = val SDL_Rect(x,call Min(y+BLOCK_SIZE, y+fh*BLOCK_SIZE*side),w*BLOCK_SIZE,fh*BLOCK_SIZE);
-            _SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0x00,0x00,0x00,0xFF);
-            _SDL_RenderFillRect(&&outer.sdl!.ren, (&&block_rect as _SDL_Rect&&));
-
-            loop i in [0 -> w[ do
-                block_rect = val SDL_Rect(x+(i*BLOCK_SIZE),y,BLOCK_SIZE,BLOCK_SIZE);
-                _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_block.tex.tex, null,
-                                &&block_rect as _SDL_Rect&&);
-            end
-
-            loop i in [1 -> fh] do
-                block_rect = val SDL_Rect(x,y + (i*BLOCK_SIZE*side),BLOCK_SIZE,BLOCK_SIZE);
-                _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_block.tex.tex, null,
-                                &&block_rect as _SDL_Rect&&);
-
-                block_rect = val SDL_Rect(x + (w*BLOCK_SIZE) - BLOCK_SIZE,y + (i*BLOCK_SIZE*side),BLOCK_SIZE,BLOCK_SIZE);
-                _SDL_RenderCopy(&&outer.sdl!.ren, &&outer.img_block.tex.tex, null,
-                                &&block_rect as _SDL_Rect&&);
-            end
-            
-            //_SDL_SetRenderDrawColor(&&outer.sdl!.ren, 0xFF,0xDD,0xDD,0xFF);
-            //_SDL_RenderFillRect(&&outer.sdl!.ren, (&&collision as _SDL_Rect&&));
+            //draw_rect.w = (tex.width*wscale) as int;
+            //draw_rect.h = (tex.height*hscale) as int;
+			draw_rect.x = (x as int)-(draw_rect.w>>1);
+			draw_rect.y = (y as int)-(draw_rect.h>>1);
+            _SDL_RenderCopyEx(&&outer.sdl!.ren, &&tex.tex, null,
+                                &&draw_rect as _SDL_Rect&&, angle, null, _SDL_FLIP_NONE);
         end
     end
 end

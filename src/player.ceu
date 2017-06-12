@@ -26,7 +26,6 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
     var bool falling = true;
     var int grav_sign = 1;
     var&? Platform myFloor;
-	pool[] Particle particles;
 
     var& int tex_w = &outer.img_player_w;
     var& int tex_h = &outer.img_player_h;
@@ -45,7 +44,8 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 			var float yspd = 40;
 			var float dir = (_rand()%180);
             var float speedMod = (outer.runSpeed / outer.minRunSpeed);
-			spawn Particle(	outer.x, outer.y + ((outer.tex_h>>2) + 4)*outer.grav_sign,            //x, y
+			spawn Particle(		&outer.img_dust.tex,									//texture
+								outer.x, outer.y + ((outer.tex_h>>2) + 4)*outer.grav_sign,  //x, y
 								0.4, 0.4,	                                                //scale
 								(_rand()%360) as float, 1.0,					            //angle, alpha
 								_cos(dir*PI/180.0)*xspd*speedMod,                           //vx
@@ -63,7 +63,7 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
             x = x + vx*dt/1000;
             y = y + vy*dt/1000;
             if falling then
-                //Collision check
+                //Platform collision check
                 var&? Platform plat;
                 var bool collided = false;
                 loop plat in outer.platforms do
@@ -89,6 +89,16 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
                     wscale = 1.4;
                     falling = false;
                 end
+
+				//Collectible collision check
+                var&? Collectible collectible;
+                loop collectible in outer.collectibles do
+					if (call Intersects(&collectible!.collision, &collision)) then
+						emit collectible!.collided;
+						vy = -vy;
+						grav_sign = -grav_sign;
+					end
+				end
             else
                 if hscale < 1.0 then hscale = hscale + 0.1; end
                 if wscale > 1.0 then wscale = wscale - 0.1; end
@@ -122,15 +132,17 @@ code/await Player (var float x, var float y) -> (var int fallSpeed) -> FOREVER d
 	with
 		every (200 + _rand()%200)ms do
 			if (not falling) then
-				spawn Particle(	x + 8, y + ((tex_h>>2) + 4)*grav_sign, 	//x, y
+				spawn Particle(	&outer.img_dust.tex,						    //texture
+								x + 8, y + ((tex_h>>2) + 4)*grav_sign, 			//x, y
 								0.4, 0.4,	//((40.0 + (_rand()%20)) as float)	//scale
 								(_rand()%360) as float, 1.0,					//angle, alpha
 								-outer.runSpeed, -20.1*grav_sign,				//vx, vy
-								50.0, 2.0, 2.0, -2.0) in particles;				//v_angle, v_wscale, v_hscale, v_alpha
+								50.0, 2.0, 2.0, -2.0) in outer.particles;		//v_angle, v_wscale, v_hscale, v_alpha
 			end
 		end
     with
         loop do
+			//TODO: Fix flipping when collecting stuff
             var _SDL_KeyboardEvent&& key;
             key = await SDL_KEYDOWN until ((key:keysym.sym==_SDLK_UP or key:keysym.sym==_SDLK_SPACE) and falling==false);
 			call SpawnBoom();
