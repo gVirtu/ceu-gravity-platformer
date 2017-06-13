@@ -36,7 +36,7 @@ code/await Collectible (var int x, var int y) -> (var SDL_Rect collision, event 
 								_cos(dir*PI/180.0)*xspd*speedMod,                           //vx
                                 _sin(dir*PI/180.0)*yspd*speedMod,          					//vy
 								90.0*speedMod,                                              //v_angle
-                                -2.0*speedMod, -2.0*speedMod, -2.0 * speedMod)                //v_wscale, v_hscale, v_alpha   
+                                -2.0*speedMod, -2.0*speedMod, -2.0 * speedMod, 0.0)         //v_wscale, v_hscale, v_alpha, grav
             in outer.particles;
         end
     with

@@ -6,11 +6,13 @@ var int img_block_h = 0;
 
 _SDL_QueryTexture(&&img_block.tex.tex, null, null, &&img_block_w, &&img_block_h);
 
-code/await Platform (var int x, var int y, var int w, var int side) -> (var SDL_Rect collision) -> void do
+code/await Platform (var int x, var int y, var int w, var int side) -> (var SDL_Rect collision, var u64 id) -> void do
     var& int tex_w = &outer.img_block_w;
     var& int tex_h = &outer.img_block_h;
 
     collision = val SDL_Rect(x,y,w*tex_w,tex_h);
+    outer.platformIds = outer.platformIds+1;
+    id = outer.platformIds;
 
     var int fh;
     if (side == 1) then

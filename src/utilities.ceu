@@ -13,6 +13,14 @@ code/tight Sign (var int value) -> int do
     end
 end
 
+code/tight Abs (var int value) -> int do
+    if value < 0 then
+        escape -value;
+    else
+        escape value;
+    end
+end
+
 code/tight Min (var int a, var int b) -> int do
     if a < b then
         escape a;

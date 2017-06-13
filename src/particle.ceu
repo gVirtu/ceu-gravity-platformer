@@ -1,8 +1,11 @@
 var& SDL_Open_Image img_dust =
         spawn SDL_Open_Image(&sdl!.ren, "res/dust.png");
+var& SDL_Open_Image img_dirt =
+        spawn SDL_Open_Image(&sdl!.ren, "res/dirt.png");
 _SDL_SetTextureBlendMode(&&img_dust.tex.tex, _SDL_BLENDMODE_BLEND);
+_SDL_SetTextureBlendMode(&&img_dirt.tex.tex, _SDL_BLENDMODE_BLEND);
 
-code/await Particle (var& SDL_Texture tex, var float x, var float y, var float wscale, var float hscale, var float angle, var float alpha, var float vx, var float vy, var float vr, var float vws, var float vhs, var float va) -> void do
+code/await Particle (var& SDL_Texture tex, var float x, var float y, var float wscale, var float hscale, var float angle, var float alpha, var float vx, var float vy, var float vr, var float vws, var float vhs, var float va, var float grav) -> void do
 	var SDL_Rect draw_rect = val SDL_Rect(0,0,tex.width,tex.height);
     par/or do
         var int dt;
@@ -11,6 +14,7 @@ code/await Particle (var& SDL_Texture tex, var float x, var float y, var float w
 			wscale = wscale + vws*dt/1000;
 			hscale = hscale + vhs*dt/1000;
 			alpha = alpha + va*dt/1000;
+            vy = vy + grav*dt/1000;
 			x = x + vx*dt/1000;
 			y = y + vy*dt/1000;
             if x < -tex.width or alpha < 0.0 or wscale < 0.0 or hscale < 0.0 then
