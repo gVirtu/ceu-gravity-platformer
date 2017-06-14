@@ -4,7 +4,7 @@
 #include "utilities.ceu"
 
 #define WINDOW_W 800
-#define WINDOW_H 576
+#define WINDOW_H 600
 
 #define GLYPH_W 48
 #define GLYPH_H 64
@@ -42,10 +42,19 @@ watching sdl do
     var& SDL_Open_Font font = spawn SDL_Open_Font("res/EHSMB.ttf", 48);
 
     loop do
+
+        var int minimumSize = 10;
+        var int yVariation = 2;
+        var int wVariation = 10;
+        var bool hardToggle = false;
+        var bool autoPlay = false;
+        event void triggerAutoPlay;
+
+        //Gameplay
         par/or do
             pause/if go_pause do
-                var bool hardToggle = false;
-                var bool autoPlay = false;
+                vector[4] SDL_Open_Image img_bg;
+                
                 var int runSpeed = 300;
                 var int minRunSpeed = runSpeed;
                 score = 1;
@@ -53,7 +62,21 @@ watching sdl do
                 var int scorelength;
                 event void gameOver;
                 event void scoreUpdate;
-                event void triggerAutoPlay;
+		
+		        #include "background.ceu"
+
+                var& SDL_Open_Image bg = spawn SDL_Open_Image(&sdl!.ren, "res/bg/bg_00.png");
+                img_bg = img_bg .. [bg];
+                bg = spawn SDL_Open_Image(&sdl!.ren, "res/bg/bg_01.png");
+                img_bg = img_bg .. [bg];
+                bg = spawn SDL_Open_Image(&sdl!.ren, "res/bg/bg_02.png");
+                img_bg = img_bg .. [bg];
+                bg = spawn SDL_Open_Image(&sdl!.ren, "res/bg/bg_03.png");
+                img_bg = img_bg .. [bg];
+                var& Background bg1 = spawn Background(&img_bg[0].tex, 0.06, 0);
+                var& Background bg2 = spawn Background(&img_bg[1].tex, 0.08, 0);
+                var& Background bg3 = spawn Background(&img_bg[2].tex, 0.10, -42.7);
+                var& Background bg4 = spawn Background(&img_bg[3].tex, 0.12, 0);
 
                 #include "platform.ceu"
 
@@ -69,12 +92,8 @@ watching sdl do
 
                 #include "player.ceu" 
 
-                var int minimumSize = 8;
-                var int yVariation = 2;
-                var int wVariation = 10;
-
                 code/tight WidthToMS (var int w) -> int do
-                    escape ((1000 * w)/outer.runSpeed);
+                    escape ((1000 * w)/outer.runSpeed); //S/V
                 end
 
                 native/pre do
@@ -87,19 +106,16 @@ watching sdl do
 
                 var int x = 0;
                 var int y = 10;
-                var int w = 20;
+                var int w = 60;
                 
                 scorelength = _log10(score) + 1;
-
-                vector[] byte string = [ {'a'},{'b'},{'c'} ];
-                string = string .. [ 70 ];
-                //var _char&& string = _;
-                _printf("%s\n", &&string[0]);
 
                 var& SDL_Open_Image img_scorefont =
                 spawn SDL_Open_Image(&sdl!.ren, "res/font.png");
                 
-                spawn Platform(x,y * img_block_h,w,1) in platforms;
+                var&? Platform lastPlat;
+                lastPlat = spawn Platform(x,y * img_block_h,w-5,1) in platforms;
+                spawn Platform(x,1 * img_block_h,w-10,-1) in platforms;
                 var& Player player = spawn Player(72, (y-0.5) * img_block_h);
                 var int t = call WidthToMS((w * img_block_w) - WINDOW_W);
                 await (t)ms;
@@ -107,19 +123,19 @@ watching sdl do
                 par/or do
                     loop do
                         w = minimumSize + _rand()%wVariation;
-                        x = WINDOW_W;
+                        x = lastPlat!.collision.x + lastPlat!.collision.w;//WINDOW_W;
                         var int vShift = 2+_rand()%yVariation;
                         y = (5 + side*vShift) * img_block_h;
 
                         if (_rand()%1000 > 950) then
                             w = w + 20;
-                            spawn Collectible(WINDOW_W + (w>>1) * img_block_w, (5 - side*4) * img_block_h) in collectibles;
+                            spawn Collectible(x + (w>>1) * img_block_w, (5 - side*4) * img_block_h) in collectibles;
                         end
 
-                        spawn Platform(x,y,w,side) in platforms;
+                        lastPlat = spawn Platform(x,y,w,side) in platforms;
                         t = call WidthToMS(w * img_block_w);
                         //t = t + (((20 - w) * (vShift) * runSpeed)/500);
-                        //_printf("Y=%d, To wait: %d ms\n", y, t);
+                        //_printf("w=%d, To wait: %d ms, s/t = %d\n", w, t, (w*img_block_w*1000)/t);
                         await (t)ms;
                         side = side * -1;
                         runSpeed = runSpeed + 10;
@@ -162,28 +178,8 @@ watching sdl do
                         _printf("A NEW HIGHSCORE! YOU SCORED %d.\n", score);
                         _printf("=================================\n\n");
                         highScore = score;
-                    end
-                with 
-                    var _SDL_KeyboardEvent&& key;
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_h);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_a);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_r);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_d);
-                    wVariation = 1;
-                    minimumSize = 3;
-                    hardToggle = true;
-                    await FOREVER;
-                with 
-                    var _SDL_KeyboardEvent&& key;
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_a);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_u);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_t);
-                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_o);
-                    autoPlay = true;
-                    emit triggerAutoPlay;
-                    await FOREVER;
-                end
-                
+                    end  
+                end              
             end
         with
             //Pause game
@@ -204,8 +200,29 @@ watching sdl do
                 end
                 emit go_pause(false);
             end
+        with 
+            var _SDL_KeyboardEvent&& key;
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_h);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_a);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_r);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_d);
+            wVariation = 1;
+            minimumSize = 3;
+            hardToggle = true;
+            _printf("Hard mode on\n");
+            await FOREVER;
+        with 
+            var _SDL_KeyboardEvent&& key;
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_a);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_u);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_t);
+            key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_o);
+            autoPlay = true;
+            emit triggerAutoPlay;
+            await FOREVER;
         end
 
+        //
         par/or do
             //not very pretty
             //2d vector support would be handy
