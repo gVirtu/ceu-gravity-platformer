@@ -30,6 +30,33 @@ native/nohold
     _SDL_SetTextureBlendMode,
     _SDL_SetTextureAlphaMod;
 
+
+spawn do
+    await async do
+        var int i;
+        loop do
+            _SDL_Delay(100);
+            emit 1s;
+            //emit SDL_REDRAW(&outer.sdl!.ren);
+        end
+        //var _SDL_KeyboardEvent key = _;
+        //key.keysym.sym = _SDLK_SPACE;
+        //emit SDL_KEYDOWN(&&key);
+    end
+end
+    /*await async do
+        var int i;
+        loop i in [1->200] do
+            _SDL_Delay(50);
+            emit 100ms;
+        end
+        var _SDL_KeyboardEvent key = _;
+        key.keysym.sym = _SDLK_SPACE;
+        emit SDL_KEYDOWN(&&key);
+    end
+    //_SDL_Delay(10000);
+end*/
+
 watching sdl do
     var int highScore = 0;
     var int score = 0;
