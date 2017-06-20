@@ -1,6 +1,6 @@
 #define CEU_SDL_MODE_FRAME (1000/60)
 #include "c.ceu"
-#include "sdl/sdl.ceu"
+#include "../include/sdl_mod.ceu"
 #include "utilities.ceu"
 
 #define WINDOW_W 800
@@ -20,31 +20,29 @@ native/const
     _SDL_FLIP_VERTICAL,
 
     _SDLK_SPACE,
+    _SDLK_f,
     _SDLK_h,
-    _SDLK_u,
+    _SDLK_l,
+    _SDLK_o,
     _SDLK_t,
-    _SDLK_o;
+    _SDLK_u;
+    
+    
 native/plain  _SDL_RendererFlip;
 native/nohold 
     _SDL_RenderCopyEx,
     _SDL_SetTextureBlendMode,
     _SDL_SetTextureAlphaMod;
 
-
-spawn do
-    await async do
-        var int i;
-        loop do
-            _SDL_Delay(100);
-            emit 1s;
-            //emit SDL_REDRAW(&outer.sdl!.ren);
-        end
-        //var _SDL_KeyboardEvent key = _;
-        //key.keysym.sym = _SDLK_SPACE;
-        //emit SDL_KEYDOWN(&&key);
-    end
+native/pre do
+    void ceu_disable_autostep(void) {
+        CEU_SDL_autostep = 0;
+    }
 end
-    /*await async do
+
+{ ceu_disable_autostep(); }
+
+/*await async do
         var int i;
         loop i in [1->200] do
             _SDL_Delay(50);
@@ -74,7 +72,7 @@ watching sdl do
         var int yVariation = 2;
         var int wVariation = 10;
         var bool hardToggle = false;
-        var bool autoPlay = false;
+        var bool autoPlay = true;
         event void triggerAutoPlay;
 
         //Gameplay
@@ -247,6 +245,54 @@ watching sdl do
             autoPlay = true;
             emit triggerAutoPlay;
             await FOREVER;
+        with 
+            loop do
+                par/or do
+                    spawn do
+                        await async do
+                            loop do
+                                _SDL_Delay(CEU_SDL_MODE_FRAME);
+                                emit SDL_DT(CEU_SDL_MODE_FRAME);
+                                //emit 1s;
+                                //emit SDL_REDRAW(&outer.sdl!.ren);
+                            end
+                            //var _SDL_KeyboardEvent key = _;
+                            //key.keysym.sym = _SDLK_SPACE;
+                            //emit SDL_KEYDOWN(&&key);
+                        end
+                    end
+                    await FOREVER;
+                with 
+                    var _SDL_KeyboardEvent&& key;
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_f);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_a);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_s);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_t);
+                end
+
+                par/or do
+                    spawn do
+                        await async do
+                            var int i;
+                            var int ffms = 1000;
+                            loop do
+                                _SDL_Delay(CEU_SDL_MODE_FRAME);
+                                loop i in [1->(ffms/CEU_SDL_MODE_FRAME)] do
+                                    emit SDL_DT(CEU_SDL_MODE_FRAME);
+                                end
+                                emit (ffms)ms;
+                            end
+                        end
+                    end
+                    await FOREVER;
+                with
+                    var _SDL_KeyboardEvent&& key;
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_s);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_l);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_o);
+                    key = await SDL_KEYDOWN until (key:keysym.sym==_SDLK_w);
+                end
+            end
         end
 
         //
